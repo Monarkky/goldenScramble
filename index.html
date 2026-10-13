@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Golden Scrambler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gold-light: #FFE55C;
+            --gold-main: #FFD700;
+            --gold-dark: #B8860B;
+            --dark-bg: #121212;
+            --dark-card: #1E1E1E;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--dark-bg);
+            color: white;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #121212 70%);
+            min-height: 100vh;
+        }
+
+        /* Golden Text & Borders */
+        .gold-text {
+            background: linear-gradient(to right, var(--gold-light), var(--gold-main), var(--gold-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 15px rgba(255, 215, 0, 0.3);
+        }
+        .gold-border {
+            border: 2px solid var(--gold-main);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2), inset 0 0 10px rgba(255, 215, 0, 0.1);
+        }
+        .gold-button {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold-main), var(--gold-light));
+            color: #000;
+            font-weight: 800;
+            text-transform: uppercase;
+            border: none;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            transition: all 0.2s ease-in-out;
+        }
+        .gold-button:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 5px 30px rgba(255, 215, 0, 0.6);
+        }
+        .gold-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Animations */
+        @keyframes violent-shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-2deg); }
+            20% { transform: translate(-3px, 0px) rotate(2deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(2deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-2deg); }
+            80% { transform: translate(-1px, -1px) rotate(2deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        @keyframes explode {
+            0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+            50% { transform: scale(1.5); opacity: 0.8; filter: brightness(2); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.9); }
+            100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        }
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Thanos Snap Dust Animation */
+        @keyframes thanos-dust {
+            0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
+            30% { opacity: 0.8; transform: scale(1.1) translateY(-2px); filter: blur(2px); }
+            100% { opacity: 0; transform: scale(0.8) translateY(-20px) rotate(5deg); filter: blur(10px); }
+        }
+
+        /* Functional Classes */
+        .buzzing {
+            animation: violent-shake 0.1s infinite;
+        }
+        .dust-away {
+            animation: thanos-dust 1.2s ease-in forwards !important;
+            pointer-events: none;
+            border-color: #333 !important;
+            background-color: rgba(185, 28, 28, 0.3) !important;
+            color: #ff6b6b !important;
+        }
+        .winner-item {
+            background-color: rgba(22, 163, 74, 0.2) !important;
+            border-color: #4ade80 !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+            z-index: 10;
+        }
+        
+        .screen { display: none; }
+        .screen.active { display: flex; animation: pop-in 0.4s ease-out; }
+        
+        .mystery-block {
+            background: var(--dark-card);
+            border: 2px solid var(--gold-dark);
+            cursor: pointer;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+        .mystery-block:not(.revealed):hover {
+            border-color: var(--gold-light);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(255,215,0,0.2);
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 50;
+        }
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        /* Scramble Overlay */
+        #scramble-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(18, 18, 18, 0.95);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .scramble-text {
+            font-size: 5rem;
+            font-weight: 900;
+            color: var(--gold-main);
+            letter-spacing: 0.5rem;
+            text-align: center;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <div id="toast" class="bg-red-600 text-white px-6 py-3 rounded-full font-bold shadow-lg border border-red-400">
+        Message goes here
+    </div>
+
+    <div id="scramble-overlay">
+        <div id="scramble-chars" class="scramble-text gold-text">!@#$%</div>
+    </div>
+
+    <div id="screen-1" class="screen active w-full max-w-lg flex-col gap-6 items-center">
+        <div class="text-center">
+            <h1 class="text-5xl md:text-6xl font-black gold-text mb-2 uppercase tracking-wide">The Golden Scrambler</h1>
+            <p class="text-gray-400 text-lg">Determine your fate in luxury.</p>
+        </div>
+
+        <div class="w-full bg-[#1e1e1e] p-6 rounded-2xl gold-border relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-[var(--gold-dark)] rounded-full blur-3xl opacity-20"></div>
+            
+            <h2 class="text-2xl font-bold mb-4 text-white text-center">Step 1: Set the Prize</h2>
+            
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Prize Name</label>
+                    <input type="text" id="prize-text" placeholder="e.g., $100 Amazon Gift Card" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-[var(--gold-main)] transition-colors">
+                </div>
+                
+                <div class="flex items-center justify-center gap-4 my-2">
+                    <div class="h-px bg-gray-700 flex-1"></div>
+                    <span class="text-gray-500 font-bold text-sm">OR</span>
+                    <div class="h-px bg-gray-700 flex-1"></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Upload Prize Image</label>
+                    <input type="file" id="prize-image" accept="image/png, image/jpeg" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--gold-main)] file:text-black hover:file:bg-[var(--gold-light)] transition-all cursor-pointer">
+                </div>
+
+                <div id="prize-preview-container" class="hidden mt-2 flex justify-center">
+                    <img id="prize-preview" src="" alt="Prize Preview" class="w-32 h-32 object-cover rounded-xl border-2 border-[var(--gold-main)] shadow-lg">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="goToScreen2()" class="gold-button w-full py-4 rounded-xl text-xl mt-4 flex items-center justify-center gap-2">
+            Continue 
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+    </div>
+
+    <div id="screen-2" class="screen w-full max-w-2xl flex-col gap-6 items-center">
+        <h2 class="text-4xl font-black gold-text uppercase text-center">Contestants</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            <!-- Left Col: Names -->
+            <div class="bg-[#1e1e1e] p-5 rounded-2xl gold-border flex flex-col h-[400px]">
+                <form id="add-name-form" class="flex gap-2 mb-4" onsubmit="addName(event)">
+                    <input type="text" id="name-input" placeholder="Enter a name..." class="flex-1 bg-black border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-[var(--gold-main)]" autocomplete="off">
+                    <button type="submit" class="gold-button px-4 rounded-lg">Add</button>
+                </form>
+                
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <span class="text-sm text-gray-400 font-bold">Total: <span id="name-count" class="text-[var(--gold-main)]">0</span></span>
+                    <button onclick="resetNames()" class="text-xs text-red-400 hover:text-red-300 transition-colors">Reset All</button>
+                </div>
+
+                <div id="names-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2 custom-scrollbar">
+                    <!-- Names injected here -->
+                </div>
+            </div>
+
+            <!-- Right Col: Mode Selection -->
+            <div class="bg-[#1e1e1e] p-5 rounded-2xl gold-border flex flex-col gap-4">
+                <h3 class="text-xl font-bold text-white mb-2">Select Game Mode</h3>
+                
+                <div class="mode-card cursor-pointer border-2 border-gray-700 rounded-xl p-4 transition-all hover:border-[var(--gold-main)]" onclick="selectMode(1)" id="mode-1-card">
+                    <h4 class="text-[var(--gold-main)] font-bold text-lg mb-1">🎰 Lucky Tap Roulette</h4>
+                    <p class="text-gray-400 text-sm leading-tight">Pick from a sea of mystery blocks. Multi-phase selection active for 4+ names! (Min 1 name)</p>
+                </div>
+                
+                <div class="mode-card cursor-pointer border-2 border-gray-700 rounded-xl p-4 transition-all hover:border-[var(--gold-main)]" onclick="selectMode(2)" id="mode-2-card">
+                    <h4 class="text-[var(--gold-main)] font-bold text-lg mb-1">🌪️ The Buzzing Blender</h4>
+                    <p class="text-gray-400 text-sm leading-tight">Up to 5 names enter the blender. They fade to dust one by one until 1 remains! (Min 2 names)</p>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="triggerScramble()" class="gold-button w-full py-5 rounded-2xl text-2xl mt-2 animate-[pulse-glow_2s_infinite]">
+            SCRAMBLE THE NAME
+        </button>
+        <button onclick="goToScreen1()" class="text-gray-500 hover:text-white transition-colors text-sm mt-2">← Back to Setup</button>
+    </div>
+
+    <div id="screen-3" class="screen w-full max-w-4xl flex-col items-center justify-center min-h-[80vh] relative">
+        
+        <!-- Mode 1 Container: Lucky Tap -->
+        <div id="mode-1-container" class="hidden w-full flex-col items-center gap-8">
+            <h2 id="mode-1-title" class="text-3xl font-bold text-white text-center">Pick a Golden Block!</h2>
+            <div id="blocks-grid" class="flex flex-wrap justify-center gap-4 w-full">
+                <!-- Blocks injected here -->
+            </div>
+        </div>
+
+        <!-- Mode 2 Container: Buzzing Blender -->
+        <div id="mode-2-container" class="hidden w-full flex-col items-center justify-center relative min-h-[400px]">
+            <h2 class="text-3xl font-bold text-white text-center mb-6">The Buzzing Blender</h2>
+            <div id="blender-box" class="w-full max-w-md p-6 bg-gradient-to-br from-[#1e1e1e] to-[#0a0a0a] rounded-3xl gold-border shadow-[0_0_50px_rgba(255,215,0,0.4)] relative z-20 flex flex-col gap-3 transition-all duration-300">
+                <!-- Names injected here -->
+            </div>
+        </div>
+
+        <!-- Winner Modal Overlay -->
+        <div id="winner-overlay" class="absolute inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex-col items-center justify-center rounded-3xl p-8 gold-border scale-0 transition-transform duration-500">
+            <h2 class="text-6xl font-black gold-text mb-4 text-center animate-bounce">WINNER!</h2>
+            <p id="winner-name-display" class="text-5xl text-white font-bold mb-8 text-center bg-[#1e1e1e] px-10 py-5 rounded-xl border border-[var(--gold-main)] shadow-[0_0_30px_rgba(255,215,0,0.4)]"></p>
+            
+            <div class="text-center mb-10">
+                <p class="text-gray-400 text-lg mb-4">Wins the prize:</p>
+                <div id="final-prize-display" class="flex flex-col items-center gap-4">
+                    <p id="final-prize-text" class="text-3xl font-bold text-[var(--gold-light)] hidden"></p>
+                    <img id="final-prize-img" src="" class="hidden w-56 h-56 object-cover rounded-xl border-2 border-[var(--gold-main)] shadow-lg">
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                <button onclick="rollAgain()" class="flex-1 gold-button py-4 rounded-xl text-lg flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Roll Again
+                </button>
+                <button onclick="fullReset()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 rounded-xl text-lg border border-gray-600 transition-colors">
+                    Start New Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        const state = {
+            prizeText: '',
+            prizeImage: null,
+            names: [],
+            mode: 1, // 1: Roulette, 2: Blender
+            lastWinner: null
+        };
+
+        // DOM Elements
+        const screens = [
+            document.getElementById('screen-1'),
+            document.getElementById('screen-2'),
+            document.getElementById('screen-3')
+        ];
+        
+        // Mode 1 Local State Tracking
+        let m1State = {
+            phase: 1,
+            selected: [],
+            map: new Map()
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function switchScreen(index) {
+            screens.forEach((screen, i) => {
+                if (i === index) {
+                    screen.classList.add('active');
+                } else {
+                    screen.classList.remove('active');
+                }
+            });
+        }
+
+        // Handle Image Upload Preview
+        document.getElementById('prize-image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    state.prizeImage = e.target.result;
+                    document.getElementById('prize-preview').src = state.prizeImage;
+                    document.getElementById('prize-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function goToScreen2() {
+            state.prizeText = document.getElementById('prize-text').value.trim();
+            if (!state.prizeText && !state.prizeImage) {
+                showToast("Please enter a prize name or upload an image!");
+                return;
+            }
+            switchScreen(1);
+            updateModeUI();
+        }
+
+        function goToScreen1() {
+            switchScreen(0);
+        }
+
+        function addName(e) {
+            e.preventDefault();
+            const input = document.getElementById('name-input');
+            const name = input.value.trim();
+            
+            if (name) {
+                state.names.push(name);
+                input.value = '';
+                renderNames();
+            }
+        }
+
+        function deleteName(index) {
+            state.names.splice(index, 1);
+            renderNames();
+        }
+
+        function resetNames() {
+            state.names = [];
+            renderNames();
+        }
+
+        function renderNames() {
+            const list = document.getElementById('names-list');
+            document.getElementById('name-count').textContent = state.names.length;
+            
+            list.innerHTML = '';
+            state.names.forEach((name, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center bg-black/50 p-3 rounded-lg border border-gray-800 animate-[pop-in_0.2s_ease-out]';
+                item.innerHTML = `
+                    <span class="text-white font-medium truncate">${name}</span>
+                    <button onclick="deleteName(${index})" class="text-gray-500 hover:text-red-500 transition-colors bg-gray-800 hover:bg-red-900/30 p-1 rounded-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function selectMode(mode) {
+            state.mode = mode;
+            updateModeUI();
+        }
+
+        function updateModeUI() {
+            document.getElementById('mode-1-card').classList.toggle('border-[var(--gold-main)]', state.mode === 1);
+            document.getElementById('mode-1-card').classList.toggle('bg-[rgba(255,215,0,0.05)]', state.mode === 1);
+            
+            document.getElementById('mode-2-card').classList.toggle('border-[var(--gold-main)]', state.mode === 2);
+            document.getElementById('mode-2-card').classList.toggle('bg-[rgba(255,215,0,0.05)]', state.mode === 2);
+        }
+
+        function triggerScramble() {
+            if (state.mode === 1 && state.names.length < 1) {
+                showToast("Need at least 1 name for this mode!");
+                return;
+            }
+            if (state.mode === 2 && state.names.length < 2) {
+                showToast("Need at least 2 names for The Buzzing Blender!");
+                return;
+            }
+
+            const overlay = document.getElementById('scramble-overlay');
+            const charsText = document.getElementById('scramble-chars');
+            overlay.style.display = 'flex';
+            
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+            let interval = setInterval(() => {
+                let text = '';
+                for(let i=0; i<8; i++) text += chars[Math.floor(Math.random() * chars.length)];
+                charsText.textContent = text;
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                overlay.style.display = 'none';
+                startSelectedMode();
+            }, 1500);
+        }
+
+        function startSelectedMode() {
+            switchScreen(2);
+            document.getElementById('winner-overlay').classList.add('hidden');
+            document.getElementById('winner-overlay').style.transform = 'scale(0)';
+            
+            if (state.mode === 1) {
+                document.getElementById('mode-1-container').classList.remove('hidden');
+                document.getElementById('mode-1-container').classList.add('flex');
+                document.getElementById('mode-2-container').classList.add('hidden');
+                document.getElementById('mode-2-container').classList.remove('flex');
+                initMode1();
+            } else {
+                document.getElementById('mode-1-container').classList.add('hidden');
+                document.getElementById('mode-1-container').classList.remove('flex');
+                document.getElementById('mode-2-container').classList.remove('hidden');
+                document.getElementById('mode-2-container').classList.add('flex');
+                initMode2();
+            }
+        }
+
+        function initMode1() {
+            const grid = document.getElementById('blocks-grid');
+            grid.innerHTML = '';
+            const title = document.getElementById('mode-1-title');
+            
+            // Determine starting phase based on name count
+            m1State = {
+                phase: state.names.length > 3 ? 1 : 2,
+                selected: [],
+                map: new Map()
+            };
+            
+            if (m1State.phase === 1) {
+                title.textContent = "Select 3 Finalist Blocks!";
+            } else {
+                title.textContent = "Pick a Golden Block!";
+                // Pre-map winner immediately if <= 3 names
+                const shuffled = [...state.names].sort(() => 0.5 - Math.random());
+                const winIdx = Math.floor(Math.random() * state.names.length);
+                for(let i=0; i<state.names.length; i++) {
+                    m1State.map.set(i, { isWinner: i === winIdx, name: shuffled[i] });
+                }
+            }
+
+            for (let i = 0; i < state.names.length; i++) {
+                const block = document.createElement('div');
+                block.id = `m1-box-${i}`;
+                block.className = 'mystery-block w-24 h-24 md:w-32 md:h-32 rounded-xl flex items-center justify-center shadow-lg relative';
+                block.innerHTML = '<span class="text-4xl pointer-events-none">?</span>';
+                
+                block.onclick = () => handleBlockClick(block, i);
+                grid.appendChild(block);
+            }
+        }
+
+        function handleBlockClick(block, i) {
+            // PHASE 1: Selecting the 3 finalists
+            if (m1State.phase === 1) {
+                if (m1State.selected.includes(i)) {
+                    // Deselect
+                    m1State.selected = m1State.selected.filter(id => id !== i);
+                    block.classList.remove('ring-4', 'ring-[var(--gold-main)]', 'scale-110');
+                } else {
+                    // Select (up to 3)
+                    if (m1State.selected.length < 3) {
+                        m1State.selected.push(i);
+                        block.classList.add('ring-4', 'ring-[var(--gold-main)]', 'scale-110');
+                        
+                        if (m1State.selected.length === 3) {
+                            transitionMode1Phase2();
+                        }
+                    }
+                }
+            } 
+            // PHASE 2: Picking the ultimate winner
+            else if (m1State.phase === 2) {
+                // Ignore clicks on already revealed boxes
+                if (block.classList.contains('revealed')) return;
+                
+                const data = m1State.map.get(i);
+                block.style.animation = 'explode 0.5s forwards';
+                
+                // Disable all blocks temporarily during reveal
+                const allBlocks = document.querySelectorAll('.mystery-block');
+                allBlocks.forEach(b => b.style.pointerEvents = 'none');
+
+                setTimeout(() => {
+                    if (data.isWinner) {
+                        state.lastWinner = data.name;
+                        showWinner(data.name);
+                    } else {
+                        revealMode1Loser(block, data.name);
+                        // Re-enable remaining unrevealed blocks
+                        allBlocks.forEach(b => {
+                            if (!b.classList.contains('revealed') && m1State.map.has(parseInt(b.id.replace('m1-box-', '')))) {
+                                b.style.pointerEvents = 'auto';
+                            }
+                        });
+                    }
+                }, 450);
+            }
+        }
+
+        function transitionMode1Phase2() {
+            m1State.phase = 2;
+            document.getElementById('mode-1-title').textContent = "Pick the Final Winner!";
+            
+            const shuffled = [...state.names].sort(() => 0.5 - Math.random());
+            const winName = shuffled[0]; // Randomly assign the first shuffled name as winner
+            
+            // Randomly assign the winner to one of the 3 selected boxes
+            const winBoxIndex = m1State.selected[Math.floor(Math.random() * 3)];
+            
+            let nameIdx = 1;
+            for (let i = 0; i < state.names.length; i++) {
+                if (i === winBoxIndex) {
+                    m1State.map.set(i, { isWinner: true, name: winName });
+                } else if (m1State.selected.includes(i)) {
+                    m1State.map.set(i, { isWinner: false, name: shuffled[nameIdx++] });
+                } else {
+                    // Unselected blocks get remaining names and are revealed immediately
+                    m1State.map.set(i, { isWinner: false, name: shuffled[nameIdx++] });
+                    const box = document.getElementById(`m1-box-${i}`);
+                    revealMode1Loser(box, m1State.map.get(i).name);
+                }
+            }
+        }
+
+        function revealMode1Loser(block, name) {
+            block.style.animation = '';
+            block.classList.add('revealed');
+            block.className = 'revealed w-24 h-24 md:w-32 md:h-32 rounded-xl flex flex-col items-center justify-center bg-gray-800 border-2 border-gray-600 opacity-40 transition-all duration-500 scale-95 pointer-events-none p-2';
+            block.innerHTML = `<span class="text-xs md:text-sm text-center text-gray-400 font-bold break-all">Nope!<br>${name}</span>`;
+        }
+
+        function initMode2() {
+            const maxNames = Math.min(5, state.names.length);
+            const shuffled = [...state.names].sort(() => 0.5 - Math.random());
+            const selectedNames = shuffled.slice(0, maxNames);
+            const winnerIndex = Math.floor(Math.random() * maxNames);
+            const winnerName = selectedNames[winnerIndex];
+            
+            state.lastWinner = winnerName;
+            
+            const blender = document.getElementById('blender-box');
+            blender.innerHTML = '';
+            blender.classList.remove('buzzing');
+            
+            const nameElements = [];
+            
+            selectedNames.forEach((name, i) => {
+                const el = document.createElement('div');
+                el.className = 'text-center text-xl font-bold p-4 bg-black/50 rounded-xl border border-gray-700 text-white transition-all duration-300';
+                el.textContent = name;
+                blender.appendChild(el);
+                nameElements.push({ el, name, isWinner: i === winnerIndex, eliminated: false });
+            });
+
+            // Start Buzzing
+            setTimeout(() => {
+                blender.classList.add('buzzing');
+                eliminateNext(nameElements, winnerName, blender);
+            }, 800);
+        }
+
+        function eliminateNext(nameElements, winnerName, blender) {
+            const availableToEliminate = nameElements.filter(n => !n.isWinner && !n.eliminated);
+            
+            if (availableToEliminate.length === 0) {
+                // Everyone else is eliminated
+                blender.classList.remove('buzzing');
+                const winnerObj = nameElements.find(n => n.isWinner);
+                winnerObj.el.classList.add('winner-item');
+                
+                setTimeout(() => showWinner(winnerName), 1500);
+                return;
+            }
+
+            // Pick a non-winner to snap into dust
+            const targetIdx = Math.floor(Math.random() * availableToEliminate.length);
+            const target = availableToEliminate[targetIdx];
+            target.eliminated = true;
+
+            const delay = 800 + Math.random() * 700;
+
+            setTimeout(() => {
+                // Trigger Thanos Dust animation
+                target.el.classList.add('dust-away');
+                
+                // Wait for the animation to fully complete, then completely remove element
+                setTimeout(() => {
+                    target.el.style.display = 'none'; // Element vanishes, blender shrinks smoothly
+                    
+                    // Recursive call for next elimination
+                    eliminateNext(nameElements, winnerName, blender);
+                }, 1200); // 1.2s matches the CSS animation duration
+            }, delay);
+        }
+
+        function showWinner(name) {
+            const overlay = document.getElementById('winner-overlay');
+            const nameDisplay = document.getElementById('winner-name-display');
+            const prizeTextDisplay = document.getElementById('final-prize-text');
+            const prizeImgDisplay = document.getElementById('final-prize-img');
+
+            nameDisplay.textContent = name;
+
+            prizeTextDisplay.classList.add('hidden');
+            prizeImgDisplay.classList.add('hidden');
+
+            if (state.prizeImage) {
+                prizeImgDisplay.src = state.prizeImage;
+                prizeImgDisplay.classList.remove('hidden');
+            }
+            if (state.prizeText) {
+                prizeTextDisplay.textContent = state.prizeText;
+                prizeTextDisplay.classList.remove('hidden');
+            }
+
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.style.transform = 'scale(1)';
+            }, 10);
+        }
+
+        function fullReset() {
+            state.prizeText = '';
+            state.prizeImage = null;
+            state.names = [];
+            state.lastWinner = null;
+            
+            document.getElementById('prize-text').value = '';
+            document.getElementById('prize-image').value = '';
+            document.getElementById('prize-preview-container').classList.add('hidden');
+            document.getElementById('prize-preview').src = '';
+            document.getElementById('name-input').value = '';
+            renderNames();
+
+            const overlay = document.getElementById('winner-overlay');
+            overlay.style.transform = 'scale(0)';
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                switchScreen(0);
+            }, 400); 
+        }
+
+        function rollAgain() {
+            const overlay = document.getElementById('winner-overlay');
+            overlay.style.transform = 'scale(0)';
+            
+            // Excise winner
+            if (state.lastWinner) {
+                const idx = state.names.indexOf(state.lastWinner);
+                if (idx > -1) {
+                    state.names.splice(idx, 1);
+                }
+                state.lastWinner = null;
+            }
+            renderNames(); 
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                
+                if (state.mode === 1 && state.names.length < 1) {
+                    showToast("Not enough names left! Add more to continue.");
+                    switchScreen(1); 
+                    return;
+                }
+                if (state.mode === 2 && state.names.length < 2) {
+                    showToast("Need at least 2 names for Blender mode! Add more.");
+                    switchScreen(1); 
+                    return;
+                }
+
+                triggerScramble();
+            }, 400);
+        }
+
+        // Init
+        updateModeUI();
+    </script>
+</body>
+</html>
